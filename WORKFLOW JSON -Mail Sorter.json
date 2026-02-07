@@ -1,0 +1,415 @@
+{
+  "name": "Mail Sorter",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8ae94fe9-8914-482a-9a8f-768a79a06099",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 20,
+        "filters": {
+          "readStatus": "unread",
+          "receivedAfter": "2026-02-01T00:00:00"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        144,
+        112
+      ],
+      "id": "f79a68a6-f815-46f3-8931-f640c410952d",
+      "name": "Get many messages",
+      "webhookId": "0853e93f-30b3-407a-b1e3-ea8fc4e73933",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Fetmp9lddQ9Qcz7J",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=You are an intelligent email classifier for a company.\nRead the email content below and categorize it into exactly ONE of these 4 categories:\n\n1. Urgent (If it mentions a bug, a refund, or a deadline)\n2. Invoice (If it contains a bill, receipt, or payment request)\n3. Newsletter (If it is marketing, news, or a promotion)\n4. Spam (If it looks irrelevant or malicious)\n\nEMAIL CONTENT:\n{{ $json.snippet }}\n\nINSTRUCTIONS:\n- You must output ONLY the category name.\n- Do not write a sentence. Do not say \"I think this is...\".\n- Just output the one word.\n\n"
+            },
+            {
+              "content": "=Subject: {{ $json.Subject }}\nEmail Body:{{ $json.snippet }}\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        320,
+        16
+      ],
+      "id": "315757db-32a4-4b02-849e-850567cd2ec0",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "m8yIGED334C5gjEo",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output[0].content[0].text }}",
+                    "rightValue": "Urgent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "6f7f8e82-f632-40f6-be06-3c7b4b38d350"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Urgent"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2a298763-1143-46c0-bf90-2d7e546e642d",
+                    "leftValue": "={{ $json.output[0].content[0].text }}",
+                    "rightValue": "Newsletter",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Newsletter"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2c91c0aa-9db0-4b05-9e4d-d405cafc0311",
+                    "leftValue": "={{ $json.output[0].content[0].text }}",
+                    "rightValue": "Invoice",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Invoice"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "18285cdc-2e5c-4dbc-a21b-dd7aeac36058",
+                    "leftValue": "={{ $json.output[0].content[0].text }}",
+                    "rightValue": "Spam",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Spam"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        640,
+        32
+      ],
+      "id": "fce6c0b4-13eb-46e0-8519-1076c8ccae6a",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "messageId": "={{ $('Get many messages').item.json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        -32
+      ],
+      "id": "9197b82b-5762-4883-8a33-b3dea83a7a0c",
+      "name": "Delete a message",
+      "webhookId": "2f373c2e-6deb-40ed-8a13-2df94c29e5b8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Fetmp9lddQ9Qcz7J",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "U0ADFQX6D0W",
+          "mode": "list",
+          "cachedResultName": "idongesitotong1"
+        },
+        "text": "=THIS IS AN URGENT MESSAGE. {{ $('Get many messages').item.json.Subject }}\n\nFROM: {{ $('Get many messages').item.json.From }}\nSUBJECT: {{ $('Get many messages').item.json.Subject }}\n \n\n",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1088,
+        80
+      ],
+      "id": "380f8029-0bbc-4c64-9acb-1009f90d4bbd",
+      "name": "Send a message",
+      "webhookId": "3551948d-038f-4f47-b690-c52e2f5c4d42",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "AxjBXEqTqde186Kz",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1tSuOiv_2u7tIp8zPFdxiq4riDbwOvJTn-7R6qF8GCYA",
+          "mode": "list",
+          "cachedResultName": "AI Invoice Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1tSuOiv_2u7tIp8zPFdxiq4riDbwOvJTn-7R6qF8GCYA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1tSuOiv_2u7tIp8zPFdxiq4riDbwOvJTn-7R6qF8GCYA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "DATE": "={{ $now }}",
+            "FORM": "={{ $('Get many messages').item.json.From }}",
+            "SUBJECT": "={{ $('Get many messages').item.json.Subject }}",
+            "EMAIL-CONTENT": "={{ $('Get many messages').item.json.snippet }}"
+          },
+          "matchingColumns": [
+            "DATE"
+          ],
+          "schema": [
+            {
+              "id": "DATE",
+              "displayName": "DATE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "FORM",
+              "displayName": "FORM",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SUBJECT",
+              "displayName": "SUBJECT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "EMAIL-CONTENT",
+              "displayName": "EMAIL-CONTENT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        928,
+        240
+      ],
+      "id": "02a628b8-b026-4530-941a-21672e0cb11f",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7G1vfiqcmXDCBoLa",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3295ec11-5e96-43b7-af24-31bb12db1a93",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4c7fffb9ad8a86693c0707fd6c08feb13fdf6b398f6808691b9aaf25153939e8"
+  },
+  "id": "ZK8SrY-8lzN8EUk7bW_Wy",
+  "tags": []
+}
