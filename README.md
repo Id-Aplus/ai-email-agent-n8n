@@ -28,7 +28,7 @@ The system performs the following steps:
 ## Setup Instructions
 
 1.  **Import the Workflow:**
-    * Download the `workflow.json` file from this repository.
+    * Download the `WORKFLOW JSON -Mail Sorter` file from this repository.
     * Open your n8n editor.
     * Select "Import from File" and upload the JSON.
 
