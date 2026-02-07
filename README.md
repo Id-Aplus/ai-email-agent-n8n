@@ -16,6 +16,7 @@ The system performs the following steps:
     * **Invoice:** Extracts key details and appends them to a Google Sheet for finance tracking. It also sends a Slack notification.
     * **Newsletter:** Automatically deletes the email.
     * **Spam:** Automatically deletes the email.
+    * ![Workflow Diagram](workflow-diagram.jpeg)
 
 ## Tech Stack
 
